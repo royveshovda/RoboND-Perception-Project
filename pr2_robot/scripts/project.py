@@ -23,6 +23,7 @@ from std_msgs.msg import String
 from pr2_robot.srv import *
 from rospy_message_converter import message_converter
 import yaml
+import pcl
 
 
 # Helper function to get surface normals
@@ -54,8 +55,27 @@ def pcl_callback(pcl_msg):
     # TODO: Convert ROS msg to PCL data
     cloud = ros_to_pcl(pcl_msg)
 
+    # TODO: Statistical Outlier Filtering
+
+    outlier_filter = cloud.make_statistical_outlier_filter()
+
+    # Set the number of neighboring points to analyze for any given point
+    outlier_filter.set_mean_k(50)
+
+    # Set threshold scale factor
+    x = 1.0
+
+    # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
+    outlier_filter.set_std_dev_mul_thresh(x)
+
+    # Finally call the filter function for magic
+    cloud_filtered = outlier_filter.filter()
+
+    # TODO: remove when filter in place
+    #cloud_filtered = cloud
+
     # TODO: Voxel Grid Downsampling
-    vox = cloud.make_voxel_grid_filter()
+    vox = cloud_filtered.make_voxel_grid_filter()
     LEAF_SIZE = 0.01
     vox.set_leaf_size(LEAF_SIZE, LEAF_SIZE, LEAF_SIZE)
     cloud_filtered = vox.filter()
@@ -63,18 +83,33 @@ def pcl_callback(pcl_msg):
     # TODO: PassThrough Filter
     passthrough = cloud_filtered.make_passthrough_filter()
 
+        # PassThrough Filter in z axis
+    passthrough = cloud_filtered.make_passthrough_filter()
+
     filter_axis = 'z'
     passthrough.set_filter_field_name(filter_axis)
-    axis_min = 0.77 # 0.76
-    axis_max = 1.1
+    axis_min = 0.61
+    axis_max = 0.9
     passthrough.set_filter_limits(axis_min, axis_max)
+
     cloud_filtered = passthrough.filter()
+
+    # PassThrough Filter in y axis
+    passthrough_2 = cloud_filtered.make_passthrough_filter()
+
+    filter_axis_2 = 'y'
+    passthrough_2.set_filter_field_name(filter_axis_2)
+    axis_min_2 = -0.425
+    axis_max_2 = 0.425
+    passthrough_2.set_filter_limits(axis_min_2, axis_max_2)
+
+    cloud_filtered = passthrough_2.filter()
 
     # TODO: RANSAC Plane Segmentation
     seq = cloud_filtered.make_segmenter()
     seq.set_model_type(pcl.SACMODEL_PLANE)
     seq.set_method_type(pcl.SAC_RANSAC)
-    max_distance = 0.01
+    max_distance = 0.005
     seq.set_distance_threshold(max_distance)
     inliers, coefficients = seq.segment()
 
@@ -90,8 +125,8 @@ def pcl_callback(pcl_msg):
     # Set tolerances for distance threshold
     # as well as minimum and maximum cluster size (in points)
     ec.set_ClusterTolerance(0.015) # 0.05
-    ec.set_MinClusterSize(20) # 30
-    ec.set_MaxClusterSize(1500) # 3000
+    ec.set_MinClusterSize(30) # 30
+    ec.set_MaxClusterSize(3000) # 3000
     # Search the k-d tree for clusters
     ec.set_SearchMethod(tree)
     # Extract indices for each of the discovered clusters
@@ -163,7 +198,8 @@ def pcl_callback(pcl_msg):
     # Could add some logic to determine whether or not your object detections are robust
     # before calling pr2_mover()
     try:
-        pr2_mover(detected_objects_list)
+        #pr2_mover(detected_objects_list)
+        rospy.loginfo('Moving')
     except rospy.ROSInterruptException:
         pass
 
@@ -180,7 +216,7 @@ def pr2_mover(object_list):
     # TODO: Rotate PR2 in place to capture side tables for the collision map
 
     # TODO: Loop through the pick list
-
+    while(False):
         # TODO: Get the PointCloud for a given object and obtain it's centroid
 
         # TODO: Create 'place_pose' for the object
@@ -213,8 +249,7 @@ if __name__ == '__main__':
     rospy.init_node('object_handler', anonymous=True)
 
     # TODO: Create Subscribers
-    pcl_sub = rospy.Subscriber("/sensor_stick/point_cloud", pc2.PointCloud2, pcl_callback, queue_size=1)
-
+    pcl_sub = rospy.Subscriber("/pr2/world/points", pc2.PointCloud2, pcl_callback, queue_size=1)
     # TODO: Create Publishers
     pcl_objects_pub = rospy.Publisher("/pcl_objects", PointCloud2, queue_size=1)
     pcl_table_pub = rospy.Publisher("/pcl_table", PointCloud2, queue_size=1)
