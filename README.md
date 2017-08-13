@@ -1,4 +1,6 @@
 # 3D Perception
+[Link to Writeup](writeup.md)
+
 Before starting any work on this project, please complete all steps for [Exercise 1, 2 and 3](https://github.com/udacity/RoboND-Perception-Exercises). At the end of Exercise-3 you have a pipeline that can identify points that belong to a specific object.
 
 In this project, you must assimilate your work from previous exercises to successfully complete a tabletop pick and place operation using PR2.
@@ -22,7 +24,7 @@ Now that you have a workspace, clone or download this repo into the src director
 $ cd ~/catkin_ws/src
 $ git clone https://github.com/udacity/RoboND-Perception-Project.git
 ```
-### Note: If you have the Kinematics Pick and Place project in the same ROS Workspace as this project, please remove the 'gazebo_grasp_plugin' directory from the `RoboND-Perception-Project/` directory otherwise ignore this note. 
+### Note: If you have the Kinematics Pick and Place project in the same ROS Workspace as this project, please remove the 'gazebo_grasp_plugin' directory from the `RoboND-Perception-Project/` directory otherwise ignore this note.
 
 Now install missing dependencies using rosdep install:
 ```sh
@@ -81,7 +83,7 @@ You can launch the project scenario like this:
 $ roslaunch pr2_robot pick_place_project.launch
 ```
 # Required Steps for a Passing Submission:
-1. Extract features and train an SVM model on new objects (see `pick_list_*.yaml` in `/pr2_robot/config/` for the list of models you'll be trying to identify). 
+1. Extract features and train an SVM model on new objects (see `pick_list_*.yaml` in `/pr2_robot/config/` for the list of models you'll be trying to identify).
 2. Write a ROS node and subscribe to `/pr2/world/points` topic. This topic contains noisy point cloud data that you must work with.
 3. Use filtering and RANSAC plane fitting to isolate the objects of interest from the rest of the scene.
 4. Apply Euclidean clustering to create separate clusters for individual items.
